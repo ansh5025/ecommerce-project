@@ -22,7 +22,7 @@ jobs:
       - name: Build And Deploy
         id: builddeploy
         env:
-          VITE_API_URL: https://ecommerce-ansh-bjgrbtcfafc2gdbh.canadacentral-01.azurewebsites.net/api
+          VITE_API_URL: https://ecommerce-api.anshrai.in/api
         uses: Azure/static-web-apps-deploy@v1
         with:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_ORANGE_COAST_0B6F2FF00 }}
