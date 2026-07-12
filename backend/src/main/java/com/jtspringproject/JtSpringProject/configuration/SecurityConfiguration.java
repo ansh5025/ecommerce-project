@@ -11,6 +11,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.web.cors.CorsConfigurationSource;
 
 import javax.servlet.http.HttpServletResponse;
 import java.util.Map;
@@ -19,10 +20,12 @@ import java.util.Map;
 public class SecurityConfiguration {
 
     private final userService userService;
+    private final CorsConfigurationSource corsConfigurationSource;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    public SecurityConfiguration(userService userService) {
+    public SecurityConfiguration(userService userService, CorsConfigurationSource corsConfigurationSource) {
         this.userService = userService;
+        this.corsConfigurationSource = corsConfigurationSource;
     }
 
     @Bean
@@ -32,7 +35,8 @@ public class SecurityConfiguration {
 
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http.csrf().disable()
+        http.cors(cors -> cors.configurationSource(corsConfigurationSource))
+                .csrf().disable()
                 .authorizeHttpRequests(requests -> requests
                         .antMatchers("/api/auth/login", "/api/auth/logout", "/api/users/register").permitAll()
                         .antMatchers("/api/admin/**").hasRole("ADMIN")
