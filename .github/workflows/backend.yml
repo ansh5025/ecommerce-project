@@ -1,0 +1,50 @@
+name: Backend
+
+on:
+  push:
+    branches: [main]
+    paths: ['backend/**', '.github/workflows/backend.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  image:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v5
+      # Tests are skipped inside the image build: the Spring context test needs a live MySQL server.
+      - name: Build and publish to GitHub Container Registry
+        run: |
+          image=ghcr.io/$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')/ecommerce-api
+          docker build ./backend \
+            --label "org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}" \
+            -t "$image:${{ github.sha }}" -t "$image:latest"
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+          docker push --all-tags "$image"
+
+  deploy:
+    needs: image
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_B8FEF0FFE987432EA59248E009B9B9BA }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_454D63A1CA554456ADAA16D9E6E92382 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_70082B4B85CC48C7BEFB7D223FCE94C0 }}
+      # Updates the image even while the app is stopped; it takes effect at the next demo-up.
+      - name: Roll out the new image
+        run: |
+          if az containerapp show -g ecommerce -n ecommerce-api --query name -o tsv > /dev/null 2>&1; then
+            az containerapp update -g ecommerce -n ecommerce-api \
+              --image "ghcr.io/ansh5025/ecommerce-api:${{ github.sha }}" --output none
+          else
+            echo "ecommerce-api doesn't exist yet; run scripts/deploy-azure.ps1 once."
+          fi
