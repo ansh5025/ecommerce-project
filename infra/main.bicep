@@ -1,9 +1,15 @@
 // Ecommerce API on Azure Container Apps, started only for demos (scripts/demo-up.ps1) and stopped otherwise.
 // The existing MySQL flexible server stays; a nightly job stops the API and MySQL in case either was left running
 // (Azure also restarts a MySQL server automatically after 30 days stopped).
+// Azure for Students allows one Container Apps environment per subscription, so this app joins the existing one.
 
-param location string = resourceGroup().location
+@description('Must match the shared environment\'s region.')
+param location string = 'japaneast'
 param prefix string = 'ecommerce'
+
+@description('Resource group and name of the shared Container Apps environment.')
+param environmentResourceGroup string = 'pulsedesk-rg'
+param environmentName string = 'pulsedesk-env'
 
 @description('Public image, e.g. ghcr.io/ansh5025/ecommerce-api:<commit sha>.')
 param image string
@@ -36,32 +42,9 @@ resource mysql 'Microsoft.DBforMySQL/flexibleServers@2023-12-30' existing = {
   name: mysqlServerName
 }
 
-resource logs 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
-  name: '${prefix}-logs'
-  location: location
-  properties: {
-    sku: { name: 'PerGB2018' }
-    retentionInDays: 30
-  }
-}
-
-// Pinned to workload-profiles mode: newer subscriptions otherwise get the restricted 'Express' mode.
-resource env 'Microsoft.App/managedEnvironments@2026-07-01' = {
-  name: '${prefix}-env'
-  location: location
-  properties: {
-    environmentMode: 'WorkloadProfiles'
-    workloadProfiles: [
-      { name: 'Consumption', workloadProfileType: 'Consumption' }
-    ]
-    appLogsConfiguration: {
-      destination: 'log-analytics'
-      logAnalyticsConfiguration: {
-        customerId: logs.properties.customerId
-        sharedKey: logs.listKeys().primarySharedKey
-      }
-    }
-  }
+resource env 'Microsoft.App/managedEnvironments@2026-07-01' existing = {
+  name: environmentName
+  scope: resourceGroup(environmentResourceGroup)
 }
 
 resource app 'Microsoft.App/containerApps@2026-07-01' = {

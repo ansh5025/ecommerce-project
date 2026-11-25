@@ -4,7 +4,7 @@
 # After the first run, CI rolls out new images automatically; re-run this only to change infrastructure.
 param(
     [string]$ResourceGroup = 'ecommerce',
-    [string]$Location = 'canadacentral',
+    [string]$Location = 'japaneast',
     [string]$Domain = 'ecommerce-api.anshrai.in',
     [string]$Tag = '',
     [string]$OldWebApp = 'ecommerce-ansh',
